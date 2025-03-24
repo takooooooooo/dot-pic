@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dot:pic</title>
+    <link rel="icon" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <style>
+        * {
+            font-family: Nosutaru-dotMPlusH-10-Regular;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            color: #333;
+            min-height: 100vh; /* 最小の高さを確保 */
+            display: flex;
+            justify-content: center;
+            align-items: center; /* 上部から配置 */
+        }
+        .screen {
+            text-align: center;
+            transition: opacity 0.5s ease-in-out;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .screen.hidden {
+            opacity: 0;
+            position: absolute;
+            pointer-events: none;
+        }
+        #initialScreen {
+            padding: 20px;
+        }
+        #initialScreen h1 {
+            font-size: 72px;
+            color: #2c3e50;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #initialScreen h3 {
+            font-size: 20px;
+            color: #34495e;
+            margin: 20px 0;
+        }
+        #initialScreen input[type="file"] {
+            display: none;
+        }
+        #initialScreen label {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #initialScreen label:hover {
+            background-color: #2980b9;
+        }
+        #editingScreen {
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+            background-color: #fff;
+            box-sizing: border-box;
+        }
+        canvas {
+            display: block;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            max-width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+            background-color: #fff;
+            width: 100%;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 12px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background-color: #2980b9;
+        }
+        /* コンテナを横に並べる */
+        .settings-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap; /* 狭い画面で折り返す */
+        }
+        /* 各コントロールのスタイル */
+        .controls {
+            flex: 1;
+            min-width: 150px; /* 最小幅を指定 */
+        }
+        /* 見出しのスタイル */
+        .controls h3 {
+            margin: 0 0 10px 0;
+            color: #34495e;
+        }
+        /* ラベルのスタイル */
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        /* 入力フィールドのスタイル */
+        input[type="number"], select {
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 200px;
+        }
+        /* スライダーのスタイル */
+        input[type="range"] {
+            width: 100%;
+            max-width: 300px;
+        }
+        /* スライダーの値表示 */
+        .slider-value {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: normal;
+            color: #7f8c8d;
+        }
+        /* ホバーのスタイル */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .overlay:not(.hidden) {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .overlay-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        .overlay-content p {
+            margin: 10px 0;
+            font-size: 16px;
+            color: #333;
+        }
+        .overlay-content button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .overlay-content button:hover {
+            background-color: #2980b9;
+        }
+        /* レスポンシブデザイン */
+        @media (max-width: 600px) {
+            .settings-container {
+                flex-direction: column; /* 狭い画面では縦並びに */
+                gap: 10px;
+            }
+            .controls {
+                min-width: 100%; /* 幅をフルに */
+            }
+            #editingScreen {
+                padding-left: 10px;
+                padding-right: 10px;
+                padding-bottom: 10px;
+                padding-top: 8px;
+            }
+            .button-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            button {
+                padding: 10px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="initialScreen" class="screen">
+        <h1>dot:pic</h1>
+        <h3>画像をアップロードしてドット絵に変換しましょう！</h3>
+        <label for="imageUpload">画像をアップロード</label>
+        <input type="file" id="imageUpload" accept="image/*">
+    </div>
+    <div id="editingScreen" class="screen hidden">
+        <canvas id="displayCanvas"></canvas>
+        <div class="settings-container">
+            <!-- 基本設定 -->
+            <div class="controls basic-settings">
+                <h3>基本設定</h3>
+                <label for="pixelArtWidth">横幅:</label>
+                <input type="number" id="pixelArtWidth" min="10" max="500" value="256">
+                <label for="numColors">色数:</label>
+                <input type="number" id="numColors" min="2" max="256" value="8">
+                <label for="paletteSelect">パレット:</label>
+                <select id="paletteSelect">
+                    <option value="original" selected>オリジナル</option>
+                    <option value="gameboy">ゲームボーイ風</option>
+                    <option value="monochrome">モノクロ</option>
+                </select>
+            </div>
+            <!-- 調整 -->
+            <div class="controls adjustment-settings">
+                <h3>調整</h3>
+                <label for="saturation">彩度: <span id="saturationValue" class="slider-value">2</span></label>
+                <input type="range" id="saturation" min="0" max="2" step="0.1" value="2">
+                <label for="contrast">コントラスト: <span id="contrastValue" class="slider-value">0.9</span></label>
+                <input type="range" id="contrast" min="0" max="2" step="0.1" value="0.9">
+                <label for="ditherStrength">境界のぼかし: <span id="ditherStrengthValue" class="slider-value">0.1</span></label>
+                <input type="range" id="ditherStrength" min="0" max="1" step="0.1" value="0.1">
+            </div>
+        </div>
+        <div class="button-container">
+            <button id="regenerateButton">再生成</button>
+            <button id="downloadButton" disabled>ダウンロード</button>
+        </div>
+        <div id="downloadOverlay" class="overlay hidden">
+            <div class="overlay-content">
+                <p>ダウンロードしています...</p>
+                <p>サポートしていただければ幸いです！</p>
+                <button id="donateButton">寄付する</button>
+                <button id="convertAnotherButton">他の画像も変換する</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('imageUpload');
+        const pixelArtWidthInput = document.getElementById('pixelArtWidth');
+        const numColorsInput = document.getElementById('numColors');
+        const paletteSelect = document.getElementById('paletteSelect');
+        const saturationSlider = document.getElementById('saturation');
+        const contrastSlider = document.getElementById('contrast');
+        const ditherStrengthSlider = document.getElementById('ditherStrength');
+        const saturationValue = document.getElementById('saturationValue');
+        const contrastValue = document.getElementById('contrastValue');
+        const ditherStrengthValue = document.getElementById('ditherStrengthValue');
+        const displayCanvas = document.getElementById('displayCanvas');
+        const downloadButton = document.getElementById('downloadButton');
+        const regenerateButton = document.getElementById('regenerateButton');
+        const initialScreen = document.getElementById('initialScreen');
+        const editingScreen = document.getElementById('editingScreen');
+        const downloadOverlay = document.getElementById('downloadOverlay');
+        const donateButton = document.getElementById('donateButton');
+        const convertAnotherButton = document.getElementById('convertAnotherButton');
+        let originalImage = null;
+        let smallCanvas = null;
+
+        downloadButton.addEventListener('click', function() {
+            if (!smallCanvas) return;
+            downloadOverlay.classList.remove('hidden');
+            const dataURL = smallCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = 'dotpic.png';
+            link.click();
+        });
+
+        donateButton.addEventListener('click', function() {
+            window.open('https://www.google.com', '_blank');
+        });
+
+        convertAnotherButton.addEventListener('click', function() {
+            downloadOverlay.classList.add('hidden');
+            switchScreen(editingScreen, initialScreen);
+            const displayCtx = displayCanvas.getContext('2d');
+            displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+            downloadButton.disabled = true;
+        });
+
+        function generate256Colors(baseColors) {
+            const palette = [...baseColors];
+            const steps = Math.ceil((256 - baseColors.length) / (baseColors.length - 1));
+            for (let i = 0; i < baseColors.length - 1; i++) {
+                const start = baseColors[i];
+                const end = baseColors[i + 1];
+                for (let j = 1; j <= steps; j++) {
+                    const t = j / (steps + 1);
+                    const r = Math.round(start.r + (end.r - start.r) * t);
+                    const g = Math.round(start.g + (end.g - start.g) * t);
+                    const b = Math.round(start.b + (end.b - start.b) * t);
+                    palette.push({ r, g, b });
+                }
+            }
+            while (palette.length < 256) {
+                const r = Math.round(Math.random() * 255);
+                const g = Math.round(Math.random() * 255);
+                const b = Math.round(Math.random() * 255);
+                palette.push({ r, g, b });
+            }
+            return palette.slice(0, 256);
+        }
+
+        const palettes = {
+            original: null,
+            gameboy: generate256Colors([
+                { r: 15, g: 56, b: 15 },
+                { r: 48, g: 98, b: 48 },
+                { r: 139, g: 172, b: 15 },
+                { r: 155, g: 188, b: 15 }
+            ]),
+            monochrome: generate256Colors([
+                { r: 0, g: 0, b: 0 },
+                { r: 85, g: 85, b: 85 },
+                { r: 170, g: 170, b: 170 },
+                { r: 255, g: 255, b: 255 }
+            ])
+        };
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        function switchScreen(from, to) {
+            from.classList.add('hidden');
+            setTimeout(() => {
+                to.classList.remove('hidden');
+            }, 500);
+        }
+
+        imageUpload.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        originalImage = img;
+                        downloadButton.disabled = false;
+                        switchScreen(initialScreen, editingScreen);
+                        updateImage();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        pixelArtWidthInput.addEventListener('input', debounce(updateImage, 100));
+        numColorsInput.addEventListener('input', debounce(updateImage, 100));
+        paletteSelect.addEventListener('change', debounce(updateImage, 100));
+        saturationSlider.addEventListener('input', () => {
+            saturationValue.textContent = saturationSlider.value;
+            debounce(updateImage, 100)();
+        });
+        contrastSlider.addEventListener('input', () => {
+            contrastValue.textContent = contrastSlider.value;
+            debounce(updateImage, 100)();
+        });
+        ditherStrengthSlider.addEventListener('input', () => {
+            ditherStrengthValue.textContent = ditherStrengthSlider.value;
+            debounce(updateImage, 100)();
+        });
+
+        regenerateButton.addEventListener('click', updateImage);
+
+        const bayerMatrix = [
+            [0, 8, 2, 10],
+            [12, 4, 14, 6],
+            [3, 11, 1, 9],
+            [15, 7, 13, 5]
+        ];
+
+        function updateImage() {
+            if (!originalImage) return;
+
+            const smallWidth = parseInt(pixelArtWidthInput.value);
+            const smallHeight = Math.round(smallWidth * originalImage.height / originalImage.width);
+            smallCanvas = document.createElement('canvas');
+            smallCanvas.width = smallWidth;
+            smallCanvas.height = smallHeight;
+            const smallCtx = smallCanvas.getContext('2d');
+            smallCtx.imageSmoothingEnabled = false;
+            smallCtx.drawImage(originalImage, 0, 0, smallWidth, smallHeight);
+
+            let imageData = smallCtx.getImageData(0, 0, smallWidth, smallHeight);
+            let data = imageData.data;
+
+            const pixels = [];
+            const totalPixels = smallWidth * smallHeight;
+            const sampleSize = Math.min(totalPixels, 1000);
+            for (let i = 0; i < sampleSize; i++) {
+                let idx = totalPixels <= 1000 ? i * 4 : Math.floor(Math.random() * totalPixels) * 4;
+                pixels.push({ r: data[idx], g: data[idx + 1], b: data[idx + 2] });
+            }
+            const k = parseInt(numColorsInput.value);
+            const initialCentroids = kMeans(pixels, k);
+            let initialPalette = initialCentroids.map(c => ({ r: Math.round(c.r), g: Math.round(c.g), b: Math.round(c.b) }));
+
+            const ditheredData = new Uint8ClampedArray(data.length);
+            const ditherStrength = parseFloat(ditherStrengthSlider.value);
+            const matrixSize = 4;
+
+            for (let y = 0; y < smallHeight; y++) {
+                for (let x = 0; x < smallWidth; x++) {
+                    const i = (y * smallWidth + x) * 4;
+                    let r = data[i];
+                    let g = data[i + 1];
+                    let b = data[i + 2];
+
+                    const mx = x % matrixSize;
+                    const my = y % matrixSize;
+                    const threshold = bayerMatrix[my][mx] / 16.0;
+                    const adjustedThreshold = threshold * ditherStrength;
+
+                    r += adjustedThreshold * 255;
+                    g += adjustedThreshold * 255;
+                    b += adjustedThreshold * 255;
+
+                    r = Math.min(255, Math.max(0, r));
+                    g = Math.min(255, Math.max(0, g));
+                    b = Math.min(255, Math.max(0, b));
+
+                    const closest = findClosestColor(r, g, b, initialPalette);
+
+                    ditheredData[i] = closest.r;
+                    ditheredData[i + 1] = closest.g;
+                    ditheredData[i + 2] = closest.b;
+                    ditheredData[i + 3] = 255;
+                }
+            }
+
+            const saturation = parseFloat(saturationSlider.value);
+            const contrast = parseFloat(contrastSlider.value);
+            for (let i = 0; i < ditheredData.length; i += 4) {
+                let r = ditheredData[i];
+                let g = ditheredData[i + 1];
+                let b = ditheredData[i + 2];
+
+                const hsl = rgbToHsl(r, g, b);
+                hsl.s *= saturation;
+                hsl.s = Math.min(1, Math.max(0, hsl.s));
+                hsl.l = (hsl.l - 0.5) * contrast + 0.5;
+                hsl.l = Math.min(1, Math.max(0, hsl.l));
+
+                const rgb = hslToRgb(hsl.h, hsl.s, hsl.l);
+                ditheredData[i] = rgb.r;
+                ditheredData[i + 1] = rgb.g;
+                ditheredData[i + 2] = rgb.b;
+            }
+
+            const selectedPaletteKey = paletteSelect.value;
+            let finalPalette;
+            if (selectedPaletteKey === 'original') {
+                finalPalette = initialPalette;
+            } else {
+                finalPalette = palettes[selectedPaletteKey].slice(0, k);
+            }
+
+            for (let i = 0; i < ditheredData.length; i += 4) {
+                const r = ditheredData[i];
+                const g = ditheredData[i + 1];
+                const b = ditheredData[i + 2];
+                const closest = findClosestColor(r, g, b, finalPalette);
+                ditheredData[i] = closest.r;
+                ditheredData[i + 1] = closest.g;
+                ditheredData[i + 2] = closest.b;
+            }
+
+            imageData.data.set(ditheredData);
+            smallCtx.putImageData(imageData, 0, 0);
+
+            displayCanvas.width = smallWidth;
+            displayCanvas.height = smallHeight;
+            const displayCtx = displayCanvas.getContext('2d');
+            displayCtx.imageSmoothingEnabled = false;
+            displayCtx.drawImage(smallCanvas, 0, 0, smallWidth, smallHeight);
+        }
+
+        function kMeans(pixels, k) {
+            if (pixels.length < k) k = pixels.length;
+            const centroids = [];
+            for (let i = 0; i < k; i++) {
+                centroids.push(pixels[Math.floor(Math.random() * pixels.length)]);
+            }
+            for (let iter = 0; iter < 20; iter++) {
+                const clusters = Array(k).fill().map(() => []);
+                for (const pixel of pixels) {
+                    const closestIdx = findClosestCentroid(pixel, centroids);
+                    clusters[closestIdx].push(pixel);
+                }
+                const newCentroids = clusters.map(cluster => {
+                    if (cluster.length === 0) return centroids[clusters.indexOf(cluster)];
+                    const sum = cluster.reduce((acc, p) => ({
+                        r: acc.r + p.r,
+                        g: acc.g + p.g,
+                        b: acc.b + p.b
+                    }), { r: 0, g: 0, b: 0 });
+                    return {
+                        r: sum.r / cluster.length,
+                        g: sum.g / cluster.length,
+                        b: sum.b / cluster.length
+                    };
+                });
+                centroids.splice(0, centroids.length, ...newCentroids);
+            }
+            return centroids;
+        }
+
+        function findClosestCentroid(pixel, centroids) {
+            let minDistance = Infinity;
+            let closestIdx = 0;
+            centroids.forEach((centroid, idx) => {
+                const dr = pixel.r - centroid.r;
+                const dg = pixel.g - centroid.g;
+                const db = pixel.b - centroid.b;
+                const distance = dr * dr + dg * dg + db * db;
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestIdx = idx;
+                }
+            });
+            return closestIdx;
+        }
+
+        function findClosestColor(r, g, b, palette) {
+            let minDistance = Infinity;
+            let closest = palette[0];
+            for (const color of palette) {
+                const dr = r - color.r;
+                const dg = g - color.g;
+                const db = b - color.b;
+                const distance = dr * dr + dg * dg + db * db;
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closest = color;
+                }
+            }
+            return closest;
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h, s, l };
+        }
+
+        function hslToRgb(h, s, l) {
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+        }
+    </script>
+</body>
+</html>
