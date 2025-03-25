@@ -309,7 +309,19 @@
         downloadButton.addEventListener('click', function() {
             if (!smallCanvas) return;
             downloadOverlay.classList.remove('hidden');
-            const dataURL = smallCanvas.toDataURL('image/png');
+        
+            // 3. 拡大用キャンバスを作成（256px → 2048px）
+            const targetWidth = 2048; // ダウンロード時の目標横幅
+            const scaleFactor = targetWidth / smallCanvas.width; // 例: 2048 / 256 = 8
+            const downloadCanvas = document.createElement('canvas');
+            downloadCanvas.width = targetWidth;
+            downloadCanvas.height = smallCanvas.height * scaleFactor;
+            const downloadCtx = downloadCanvas.getContext('2d');
+            downloadCtx.imageSmoothingEnabled = false;
+            downloadCtx.drawImage(smallCanvas, 0, 0, downloadCanvas.width, downloadCanvas.height);
+        
+            // 4. 拡大したキャンバスからダウンロード
+            const dataURL = downloadCanvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.href = dataURL;
             link.download = 'dotpic.png';
@@ -428,26 +440,22 @@
         function updateImage() {
             if (!originalImage) return;
         
-            const targetWidth = 1024; // ダウンロード時の目標横幅（例: 1024px）
-            const smallWidth = parseInt(pixelArtWidthInput.value);
-            const scaleFactor = targetWidth / smallWidth; // 動的にscaleFactorを計算
+            const smallWidth = parseInt(pixelArtWidthInput.value); // ユーザーが指定したピクセルアート幅（例: 256px）
             const smallHeight = Math.round(smallWidth * originalImage.height / originalImage.width);
-            const highResWidth = smallWidth * scaleFactor;
-            const highResHeight = smallHeight * scaleFactor;
         
-            // 高解像度キャンバスを作成
+            // 1. ユーザーが指定したサイズ（例: 256px）でドット絵を生成
             smallCanvas = document.createElement('canvas');
-            smallCanvas.width = highResWidth;
-            smallCanvas.height = highResHeight;
+            smallCanvas.width = smallWidth;
+            smallCanvas.height = smallHeight;
             const smallCtx = smallCanvas.getContext('2d');
             smallCtx.imageSmoothingEnabled = false;
-            smallCtx.drawImage(originalImage, 0, 0, highResWidth, highResHeight);
+            smallCtx.drawImage(originalImage, 0, 0, smallWidth, smallHeight);
         
-            let imageData = smallCtx.getImageData(0, 0, highResWidth, highResHeight);
+            let imageData = smallCtx.getImageData(0, 0, smallWidth, smallHeight);
             let data = imageData.data;
         
             const pixels = [];
-            const totalPixels = highResWidth * highResHeight;
+            const totalPixels = smallWidth * smallHeight;
             const sampleSize = Math.min(totalPixels, 1000);
             for (let i = 0; i < sampleSize; i++) {
                 let idx = totalPixels <= 1000 ? i * 4 : Math.floor(Math.random() * totalPixels) * 4;
@@ -461,9 +469,9 @@
             const ditherStrength = parseFloat(ditherStrengthSlider.value);
             const matrixSize = 4;
         
-            for (let y = 0; y < highResHeight; y++) {
-                for (let x = 0; x < highResWidth; x++) {
-                    const i = (y * highResWidth + x) * 4;
+            for (let y = 0; y < smallHeight; y++) {
+                for (let x = 0; x < smallWidth; x++) {
+                    const i = (y * smallWidth + x) * 4;
                     let r = data[i];
                     let g = data[i + 1];
                     let b = data[i + 2];
@@ -530,7 +538,7 @@
             imageData.data.set(ditheredData);
             smallCtx.putImageData(imageData, 0, 0);
         
-            // 表示用キャンバスは元のサイズで描画
+            // 2. 表示用キャンバス（元のサイズで表示）
             displayCanvas.width = smallWidth;
             displayCanvas.height = smallHeight;
             const displayCtx = displayCanvas.getContext('2d');
