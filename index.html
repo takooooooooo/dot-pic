@@ -310,7 +310,7 @@
             if (!smallCanvas) return;
             downloadOverlay.classList.remove('hidden');
         
-            // 3. 拡大用キャンバスを作成（256px → 2048px）
+            // 拡大用キャンバスを作成（256px → 2048px）
             const targetWidth = 2048; // ダウンロード時の目標横幅
             const scaleFactor = targetWidth / smallCanvas.width; // 例: 2048 / 256 = 8
             const downloadCanvas = document.createElement('canvas');
@@ -318,9 +318,10 @@
             downloadCanvas.height = smallCanvas.height * scaleFactor;
             const downloadCtx = downloadCanvas.getContext('2d');
             downloadCtx.imageSmoothingEnabled = false;
+            // ディザリング処理をスキップし、単純に拡大
             downloadCtx.drawImage(smallCanvas, 0, 0, downloadCanvas.width, downloadCanvas.height);
         
-            // 4. 拡大したキャンバスからダウンロード
+            // 拡大したキャンバスからダウンロード
             const dataURL = downloadCanvas.toDataURL('image/png');
             const link = document.createElement('a');
             link.href = dataURL;
